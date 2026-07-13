@@ -36,6 +36,7 @@ const els = {
   codeOut: $("#code-out"),
   statusline: $("#statusline"),
   previewFrame: $("#preview-frame"),
+  viewportBar: $("#viewport-bar"),
   openPreview: $("#open-preview"),
   download: $("#download"),
   // Auth
@@ -361,6 +362,8 @@ function resetWorkArea() {
   els.statusline.classList.remove("error");
   els.openPreview.hidden = true;
   els.download.hidden = true;
+  els.viewportBar.hidden = true;
+  setViewport("full");
   els.previewFrame.classList.remove("visible");
   els.previewFrame.removeAttribute("src");
   disableEditMode();
@@ -404,8 +407,29 @@ function showDone(ev) {
   els.download.href = ev.download_url;
   els.download.hidden = false;
   els.editMode.hidden = false;
+  els.viewportBar.hidden = false;
+  setViewport("full");
   switchTab("preview");
 }
+
+/* ── Toggle de viewport de la preview ─────────
+   Cambia el ancho del iframe con presets (móvil/tablet/escritorio) para revisar
+   el prototipo a distintos anchos. No recarga el iframe, así que el modo edición
+   y el scroll interno se conservan. */
+const VIEWPORTS = { full: "100%", 768: "768px", 375: "375px" };
+
+function setViewport(w) {
+  els.previewFrame.style.width = VIEWPORTS[w] || "100%";
+  document.querySelectorAll(".vp-btn").forEach((btn) => {
+    const on = btn.dataset.w === String(w);
+    btn.classList.toggle("active", on);
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+  });
+}
+
+document.querySelectorAll(".vp-btn").forEach((btn) => {
+  btn.addEventListener("click", () => setViewport(btn.dataset.w));
+});
 
 function handleEvent(ev) {
   switch (ev.type) {
