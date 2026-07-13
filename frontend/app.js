@@ -60,6 +60,7 @@ const els = {
   editInput: $("#edit-input"),
   editApply: $("#edit-apply"),
   editCancel: $("#edit-cancel"),
+  themeToggle: $("#theme-toggle"),
 };
 
 let currentSource = null; // EventSource activo
@@ -622,7 +623,31 @@ els.editApply.addEventListener("click", async () => {
   }
 });
 
+/* ── Tema claro/oscuro ────────────────────────
+   El script inline de <head> ya fijó data-theme antes del primer render (evita
+   el flash). Aquí solo sincronizamos el icono del botón y lo alternamos, con la
+   preferencia persistida en localStorage. */
+const THEME_KEY = "imagineai-theme";
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  const light = theme === "light";
+  els.themeToggle.setAttribute("aria-checked", light ? "true" : "false");
+  els.themeToggle.title = light ? "Cambiar a tema oscuro" : "Cambiar a tema claro";
+}
+
+function initTheme() {
+  applyTheme(document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark");
+}
+
+els.themeToggle.addEventListener("click", () => {
+  const next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+  applyTheme(next);
+  try { localStorage.setItem(THEME_KEY, next); } catch {}
+});
+
 /* ── Init ────────────────────────────────────── */
+initTheme();
 refreshHealth();
 setInterval(refreshHealth, 15000);
 loadModels();
