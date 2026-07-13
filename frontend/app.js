@@ -26,6 +26,7 @@ const els = {
   stack: $("#stack"),
   model: $("#model"),
   device: $("#device"),
+  gpu: $("#gpu-status"),
   generate: $("#generate"),
   historyList: $("#history-list"),
   stages: $("#stages"),
@@ -125,6 +126,47 @@ async function loadDevices() {
     }
   } catch {
     els.device.innerHTML = "<option value='gpu'>GPU</option><option value='cpu'>CPU</option>";
+  }
+}
+
+function fmtGB(bytes) {
+  return `${((bytes || 0) / 1e9).toFixed(1)} GB`;
+}
+
+// Muestra qué modelo tiene cargado Ollama y qué fracción vive en VRAM,
+// para dar visibilidad de lo que ocurre con el hardware junto al selector.
+async function refreshGpu() {
+  try {
+    const data = await (await fetch("/api/gpu")).json();
+    const loaded = data.loaded || [];
+    if (!loaded.length) {
+      els.gpu.innerHTML =
+        '<span class="gpu-empty">Sin modelo en memoria · se cargará al generar</span>';
+      els.gpu.hidden = false;
+      return;
+    }
+    els.gpu.innerHTML = loaded
+      .map((m) => {
+        const pct = Math.max(0, Math.min(100, m.gpu_pct || 0));
+        const onCpu = pct === 0;
+        return `
+        <div class="gpu-row${onCpu ? " on-cpu" : ""}">
+          <span class="gpu-name" title="${m.name}">${m.name}</span>
+          <div class="gpu-bar" role="meter" aria-label="Fracción del modelo en GPU"
+               aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"
+               aria-valuetext="${onCpu ? "En CPU, 0 % en GPU" : `${pct} % en GPU`}">
+            <span style="width:${pct}%"></span>
+          </div>
+          <div class="gpu-meta">
+            <span class="gpu-pct">${onCpu ? "En CPU (0 % en GPU)" : `${pct} % en GPU`}</span>
+            <span>${fmtGB(m.size_vram)} / ${fmtGB(m.size)}</span>
+          </div>
+        </div>`;
+      })
+      .join("");
+    els.gpu.hidden = false;
+  } catch {
+    els.gpu.hidden = true;
   }
 }
 
@@ -397,6 +439,7 @@ function attachToJob(jobId) {
 
 function showDone(ev) {
   showStatus(`Prototipo listo · archivos: ${(ev.files || []).join(", ")}`, false);
+  refreshGpu(); // el modelo acaba de cargarse en VRAM: refleja el estado real
   els.previewFrame.src = ev.preview_url;
   els.previewFrame.classList.add("visible");
   els.openPreview.href = ev.preview_url;
@@ -624,7 +667,11 @@ els.editApply.addEventListener("click", async () => {
 
 /* ── Init ────────────────────────────────────── */
 refreshHealth();
-setInterval(refreshHealth, 15000);
+refreshGpu();
+setInterval(() => {
+  refreshHealth();
+  refreshGpu();
+}, 15000);
 loadModels();
 loadStacks();
 loadDevices();
