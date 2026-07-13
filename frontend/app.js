@@ -261,6 +261,7 @@ function openJob(job) {
       preview_url: job.preview_url,
       download_url: job.download_url,
     });
+    restoreBrief(job.id); // el manifiesto no se transmite al reabrir: lo recupera del README
     markActiveHistory(job.id);
     return;
   }
@@ -278,6 +279,19 @@ function openJob(job) {
 function markActiveHistory(jobId) {
   document.querySelectorAll("#history-list li").forEach((li) =>
     li.classList.toggle("active", li.dataset.id === jobId));
+}
+
+/* Recupera el manifiesto de diseño al reabrir un trabajo terminado. En vivo se
+   transmite por streaming; desde el historial no hay stream, así que se pide al
+   backend (que lo lee del README.md del proyecto) y se repuebla el panel. */
+async function restoreBrief(jobId) {
+  try {
+    const { brief } = await (await fetch(`/api/jobs/${jobId}/brief`)).json();
+    if (brief && currentJobId === jobId) { // sigue siendo el trabajo abierto
+      els.briefOut.textContent = brief;
+      els.briefBox.open = true;
+    }
+  } catch { /* si falla, simplemente no se restaura el manifiesto */ }
 }
 
 /* ── Etapas ──────────────────────────────────── */
