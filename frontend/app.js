@@ -351,6 +351,13 @@ els.generate.addEventListener("click", async () => {
   }
 });
 
+els.prompt.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+    e.preventDefault();
+    els.generate.click();
+  }
+});
+
 function resetWorkArea() {
   els.streamEmpty.hidden = true;
   els.streamWrap.hidden = false;
