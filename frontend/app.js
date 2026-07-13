@@ -34,7 +34,7 @@ const els = {
   briefBox: $("#brief-box"),
   briefOut: $("#brief-out"),
   codeOut: $("#code-out"),
-  statusline: $("#statusline"),
+  toasts: $("#toasts"),
   previewFrame: $("#preview-frame"),
   openPreview: $("#open-preview"),
   download: $("#download"),
@@ -357,8 +357,7 @@ function resetWorkArea() {
   els.briefOut.textContent = "";
   els.codeOut.textContent = "";
   els.briefBox.open = true;
-  els.statusline.hidden = true;
-  els.statusline.classList.remove("error");
+  clearToasts();
   els.openPreview.hidden = true;
   els.download.hidden = true;
   els.previewFrame.classList.remove("visible");
@@ -388,7 +387,7 @@ function attachToJob(jobId) {
     source.close();
     fetch(`/api/jobs/${jobId}`).then((r) => r.json()).then((job) => {
       if (job.status !== "done" && job.status !== "error") {
-        showStatus("Conexión perdida con el servidor. Reintentando…", true);
+        showToast("Conexión perdida con el servidor. Reintentando…", "warning");
         setTimeout(() => attachToJob(jobId), 2000);
       }
     }).catch(() => {});
@@ -396,7 +395,7 @@ function attachToJob(jobId) {
 }
 
 function showDone(ev) {
-  showStatus(`Prototipo listo · archivos: ${(ev.files || []).join(", ")}`, false);
+  showToast(`Prototipo listo · archivos: ${(ev.files || []).join(", ")}`, "success");
   els.previewFrame.src = ev.preview_url;
   els.previewFrame.classList.add("visible");
   els.openPreview.href = ev.preview_url;
@@ -446,10 +445,82 @@ function finishGeneration() {
   loadHistory();
 }
 
+/* ── Toasts ───────────────────────────────────
+   Reemplazan la statusline única: se apilan, permiten ver varios estados/errores
+   a la vez, se autodescartan (con pausa al pasar el mouse) o se cierran a mano, y
+   de-duplican mensajes idénticos para no spamear en reintentos. */
+const TOAST_TTL = { info: 4000, success: 4500, warning: 6000, error: 7000 };
+const TOAST_MAX = 5;
+const TOAST_ICONS = {
+  success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
+  error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>',
+  warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17.5v.01"/></svg>',
+  info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></svg>',
+};
+
+function showToast(message, type = "info") {
+  if (!message) return;
+  const container = els.toasts;
+  // De-dup: si ya hay un toast igual visible, solo reinicia su temporizador.
+  const dup = [...container.children].find(
+    (t) => t.dataset.msg === message && t.dataset.type === type);
+  if (dup) { scheduleToastDismiss(dup); return; }
+
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type}`;
+  toast.setAttribute("role", type === "error" ? "alert" : "status");
+  toast.dataset.msg = message;
+  toast.dataset.type = type;
+
+  const icon = document.createElement("span");
+  icon.className = "toast-icon";
+  icon.setAttribute("aria-hidden", "true");
+  icon.innerHTML = TOAST_ICONS[type] || TOAST_ICONS.info;
+
+  const text = document.createElement("span");
+  text.className = "toast-msg";
+  text.textContent = message; // textContent: a prueba de HTML en el mensaje
+
+  const close = document.createElement("button");
+  close.className = "toast-close";
+  close.setAttribute("aria-label", "Cerrar notificación");
+  close.textContent = "✕";
+  close.addEventListener("click", () => dismissToast(toast));
+
+  toast.append(icon, text, close);
+  toast.addEventListener("mouseenter", () => clearTimeout(toast._timer));
+  toast.addEventListener("mouseleave", () => scheduleToastDismiss(toast));
+  container.appendChild(toast);
+
+  // Limita el apilado quitando los más antiguos.
+  while (container.children.length > TOAST_MAX) dismissToast(container.firstElementChild, true);
+
+  requestAnimationFrame(() => toast.classList.add("show"));
+  scheduleToastDismiss(toast);
+}
+
+function scheduleToastDismiss(toast) {
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => dismissToast(toast), TOAST_TTL[toast.dataset.type] || TOAST_TTL.info);
+}
+
+function dismissToast(toast, immediate) {
+  if (!toast) return;
+  clearTimeout(toast._timer);
+  if (immediate) { toast.remove(); return; }
+  toast.classList.remove("show");
+  toast.classList.add("hide");
+  toast.addEventListener("transitionend", () => toast.remove(), { once: true });
+  setTimeout(() => toast.remove(), 300); // respaldo si no dispara transitionend
+}
+
+function clearToasts() {
+  [...els.toasts.children].forEach((t) => dismissToast(t, true));
+}
+
+// Alias retrocompatible: el resto del código sigue llamando showStatus.
 function showStatus(text, isError) {
-  els.statusline.hidden = false;
-  els.statusline.textContent = text;
-  els.statusline.classList.toggle("error", isError);
+  showToast(text, isError ? "error" : "info");
 }
 
 /* ── Editor de preview (click sobre elementos) ──────────────────
@@ -478,7 +549,7 @@ function iframeDoc() {
 function enableEditMode() {
   const doc = iframeDoc();
   if (!doc || !doc.body) {
-    showStatus("La preview aún no está lista para editar.", true);
+    showToast("La preview aún no está lista para editar.", "warning");
     return;
   }
   editModeOn = true;

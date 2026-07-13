@@ -117,7 +117,6 @@
             </details>
             <pre class="code-out" id="code-out"></pre>
           </div>
-          <div class="statusline" id="statusline" hidden></div>
         </div>
         <div class="pane" id="pane-preview">
           <iframe id="preview-frame" title="Preview del prototipo generado" sandbox="allow-scripts allow-same-origin"></iframe>
@@ -139,6 +138,9 @@
       </div>
     </section>
   </main>
+
+  <!-- Contenedor de notificaciones toast (apiladas, esquina inferior derecha) -->
+  <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
 
   <script src="app.js"></script>
 </body>
