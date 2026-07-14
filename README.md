@@ -26,6 +26,7 @@ Además del generador, el producto resuelve tres problemas típicos de este tipo
 | Validación de código | Node.js + `@babel/standalone` (vendorizado) para detectar y auto-reparar errores de sintaxis JSX |
 | Autenticación | Sesiones por cookie `HttpOnly`, contraseñas con PBKDF2-HMAC-SHA256 |
 | Streaming | Server-Sent Events (SSE) para ver tokens del modelo en vivo |
+| Monitoreo de hardware | `nvidia-smi` (utilización real de GPU) + [psutil](https://github.com/giampaolo/psutil) (utilización real de CPU) |
 
 No hay dependencias de frontend que instalar (ni `npm`, ni bundler): todo el cliente es JS plano servido como archivos estáticos.
 
@@ -46,7 +47,8 @@ No hay dependencias de frontend que instalar (ni `npm`, ni bundler): todo el cli
 | `backend/main.py` | Rutas FastAPI: auth, generación, edición, historial, SSE, descarga, y sirve `frontend/` y `generated/` |
 | `backend/pipeline.py` | Orquesta las etapas del pipeline, parsea la salida del modelo, ensambla y empaqueta el proyecto |
 | `backend/prompts.py` | Los prompts anti-plantilla (dirección creativa + implementación por stack) y la semilla creativa por corrida |
-| `backend/llm.py` | Cliente streaming de Ollama (chat, listado de modelos, estado de GPU, precarga) |
+| `backend/llm.py` | Cliente streaming de Ollama (chat, listado de modelos, memoria del modelo cargado, precarga) |
+| `backend/hardware.py` | Utilización REAL de cómputo de GPU (`nvidia-smi`) y CPU (`psutil`) para la barra de hardware |
 | `backend/auth.py` / `backend/db.py` | Registro/login, sesiones, y persistencia de usuarios/trabajos en SQLite |
 | `backend/jobs.py` | Trabajos en memoria: estado, eventos SSE y suscriptores |
 | `backend/config.py` | Toda la configuración, sobreescribible por variables de entorno |
@@ -75,7 +77,9 @@ Se elige por proyecto (selector en el frontend, campo `stack` en `/api/generate`
 - **`gpu` (default)** — Ollama offloadea el máximo de capas que quepan en la GPU (o el número exacto fijado por `SIX_NUM_GPU`). Modo rápido; requiere VRAM suficiente para el modelo elegido.
 - **`cpu`** — fuerza `num_gpu=0` (todo el modelo en RAM) y fija `num_thread` al número de núcleos lógicos disponibles. Útil si la GPU está ocupada o el modelo no cabe en VRAM; bastante más lento.
 
-Las ediciones dirigidas heredan el dispositivo del proyecto original. `GET /api/gpu` muestra qué modelo está cargado y qué fracción vive en VRAM.
+Las ediciones dirigidas heredan el dispositivo del proyecto original. `GET /api/gpu` muestra qué modelo está cargado y qué fracción de su memoria vive en VRAM.
+
+Junto al selector, una **barra de uso de hardware** muestra la utilización de cómputo REAL (no memoria) del dispositivo elegido: `GET /api/hardware` reporta `gpu.utilization` (vía `nvidia-smi`) y `cpu.utilization` (vía `psutil`), sondeados cada pocos segundos. El label junto a la barra ("Uso de GPU" / "Uso de CPU") cambia al instante si cambias el selector, y la barra pasa a un color rojizo de advertencia a partir del 60 % de uso.
 
 ### Cuentas y edición desde la preview
 
@@ -123,6 +127,7 @@ Abre **http://localhost:8000**, crea una cuenta, escribe tu prompt, elige **stac
 | `SIX_KEEP_ALIVE` | `30m` | Cuánto mantiene Ollama el modelo cargado tras cada llamada |
 | `SIX_NUM_GPU` | `-1` | Capas a offloadear a GPU en modo `gpu` (-1 = automático de Ollama) |
 | `SIX_DEVICE` | `gpu` | Dispositivo por defecto del selector (`gpu` o `cpu`) |
+| `SIX_NVIDIA_SMI_BIN` | `nvidia-smi` | Ruta/nombre del binario para leer la utilización real de GPU (barra de hardware) |
 | `SIX_SESSION_TTL` | 30 días | Vigencia de la cookie de sesión (segundos) |
 
 ### Memoria de GPU (ejemplo: RTX 4070 / 12 GB)
@@ -153,6 +158,7 @@ backend/
   pipeline.py  # etapas del pipeline + parser de archivos + ensamblado + zip
   prompts.py   # prompts anti-plantilla y semilla creativa
   llm.py       # cliente streaming de Ollama
+  hardware.py  # uso real de GPU/CPU (nvidia-smi + psutil) para la barra de hardware
   auth.py      # registro/login, hashing y sesiones
   db.py        # persistencia SQLite (usuarios, sesiones, jobs) + migraciones
   jobs.py      # jobs en memoria, eventos y suscriptores SSE

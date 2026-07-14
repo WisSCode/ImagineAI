@@ -27,6 +27,11 @@ KEEP_ALIVE = os.getenv("SIX_KEEP_ALIVE", "30m")
 # ese número exacto de capas.
 NUM_GPU = int(os.getenv("SIX_NUM_GPU", "-1"))
 
+# Binario de la CLI de NVIDIA para leer el % de utilización REAL de la GPU
+# (compute, no memoria). En Windows/Linux con drivers NVIDIA suele estar en el
+# PATH; se puede apuntar a una ruta absoluta si no lo está.
+NVIDIA_SMI_BIN = os.getenv("SIX_NVIDIA_SMI_BIN", "nvidia-smi")
+
 # Dispositivo de cómputo: seleccionable por generación, igual que el stack.
 DEVICES = {
     "gpu": {"label": "GPU (rápido, usa VRAM)"},

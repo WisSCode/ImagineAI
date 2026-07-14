@@ -26,6 +26,7 @@ const els = {
   stack: $("#stack"),
   model: $("#model"),
   device: $("#device"),
+  gpu: $("#gpu-status"),
   generate: $("#generate"),
   historyList: $("#history-list"),
   stages: $("#stages"),
@@ -127,6 +128,47 @@ async function loadDevices() {
     }
   } catch {
     els.device.innerHTML = "<option value='gpu'>GPU</option><option value='cpu'>CPU</option>";
+  }
+  // El default pudo no ser "gpu" (SIX_DEVICE): refleja el dispositivo real
+  // ya que la barra se pintó una primera vez antes de que esto cargara.
+  refreshHardware();
+}
+
+// Umbral a partir del cual la barra pasa a advertir en rojo (uso alto).
+const HW_WARN_THRESHOLD = 60;
+
+// Muestra el uso REAL de cómputo (GPU vía nvidia-smi, CPU vía psutil) del
+// dispositivo actualmente seleccionado en "Procesamiento". Distinto de
+// /api/gpu (que reporta memoria, no utilización): esta barra refleja qué tan
+// ocupado está el hardware ahora mismo, y cambia de label/color según el
+// dispositivo elegido y si supera el 60 %.
+async function refreshHardware() {
+  const device = els.device.value === "cpu" ? "cpu" : "gpu";
+  const label = device === "cpu" ? "Uso de CPU" : "Uso de GPU";
+  try {
+    const data = await (await fetch("/api/hardware")).json();
+    const info = data[device] || {};
+    if (!info.available || info.utilization === null || info.utilization === undefined) {
+      els.gpu.innerHTML = `<span class="gpu-empty">${label}: no disponible en este equipo</span>`;
+      els.gpu.hidden = false;
+      return;
+    }
+    const pct = Math.max(0, Math.min(100, Math.round(info.utilization)));
+    const over = pct >= HW_WARN_THRESHOLD;
+    els.gpu.innerHTML = `
+      <div class="gpu-row${over ? " over" : ""}">
+        <div class="gpu-bar" role="meter" aria-label="${label}"
+             aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"
+             aria-valuetext="${pct} % — ${label}">
+          <span style="width:${pct}%"></span>
+        </div>
+        <div class="gpu-meta">
+          <span class="gpu-pct">${label}: ${pct} %</span>
+        </div>
+      </div>`;
+    els.gpu.hidden = false;
+  } catch {
+    els.gpu.hidden = true;
   }
 }
 
@@ -420,7 +462,8 @@ function attachToJob(jobId) {
 }
 
 function showDone(ev) {
-  showToast(`Prototipo listo · archivos: ${(ev.files || []).join(", ")}`, "success");
+  showStatus(`Prototipo listo · archivos: ${(ev.files || []).join(", ")}`, false);
+  refreshHardware(); // la generación recién terminó: refleja el uso real actual
   els.previewFrame.src = ev.preview_url;
   els.previewFrame.classList.add("visible");
   els.openPreview.href = ev.preview_url;
@@ -765,7 +808,14 @@ els.themeToggle.addEventListener("click", () => {
 /* ── Init ────────────────────────────────────── */
 initTheme();
 refreshHealth();
+refreshHardware();
 setInterval(refreshHealth, 15000);
+// El uso de hardware cambia rápido (sobre todo durante una generación), así
+// que se sondea más seguido que la salud del backend.
+setInterval(refreshHardware, 4000);
+// Cambiar GPU/CPU en el selector debe reflejarse de inmediato en la barra,
+// sin esperar al próximo sondeo.
+els.device.addEventListener("change", refreshHardware);
 loadModels();
 loadStacks();
 loadDevices();

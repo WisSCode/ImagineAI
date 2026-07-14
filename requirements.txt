@@ -1,4 +1,5 @@
 fastapi>=0.115
 uvicorn[standard]>=0.32
 httpx2>=0.27
+psutil>=5.9  # uso real de CPU para la barra de hardware
 pytest>=8.0  # tests (py -3.13 -m pytest tests)

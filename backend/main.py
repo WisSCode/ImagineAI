@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import auth, config, db, llm, pipeline, prompts
+from . import auth, config, db, hardware, llm, pipeline, prompts
 from .jobs import manager
 
 
@@ -87,8 +87,15 @@ async def health():
 
 @app.get("/api/gpu")
 async def gpu():
-    """Qué modelos están cargados y qué fracción vive en la GPU."""
+    """Qué modelos están cargados y qué fracción de su memoria vive en la GPU."""
     return {"loaded": await llm.gpu_status(), "keep_alive": config.KEEP_ALIVE}
+
+
+@app.get("/api/hardware")
+async def hardware_status():
+    """Uso REAL de cómputo de GPU y CPU (para la barra de hardware del
+    frontend) — distinto de /api/gpu, que reporta memoria del modelo cargado."""
+    return await hardware.snapshot()
 
 
 @app.get("/api/stacks")

@@ -1,6 +1,8 @@
 .claude/
 .pytest_cache/
 generated/
-data
+data/
+backend/__pycache__/
+.vscode/
 venv/
 tests/__pycache__/
