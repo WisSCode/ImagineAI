@@ -103,21 +103,18 @@ textarea:focus, select:focus { outline: 2px solid var(--brand); outline-offset: 
 }
 .gpu-status .gpu-empty { color: var(--ink-dim); }
 .gpu-row { display: flex; flex-direction: column; gap: 5px; }
-.gpu-name {
-  font-family: var(--mono);
-  font-size: 11.5px;
-  color: var(--ink);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
 .gpu-bar { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
 .gpu-bar > span {
   display: block; height: 100%;
   background: linear-gradient(90deg, var(--accent), var(--brand));
-  transition: width .3s ease;
+  transition: width .3s ease, background-color .3s ease;
 }
+/* Uso de hardware por debajo del 60 %: color normal (arriba). A partir del
+   60 % la barra y el texto pasan a un tono rojizo de advertencia. */
+.gpu-row.over .gpu-bar > span { background: var(--danger); }
 .gpu-meta { display: flex; justify-content: space-between; gap: 8px; color: var(--ink-dim); }
 .gpu-meta .gpu-pct { color: var(--brand); font-weight: 600; }
-.gpu-row.on-cpu .gpu-pct { color: var(--ink-dim); }
+.gpu-row.over .gpu-pct { color: var(--danger); }
 
 .btn {
   border: 1px solid var(--line);
