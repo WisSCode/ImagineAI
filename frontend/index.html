@@ -140,7 +140,14 @@
           <div class="statusline" id="statusline" hidden></div>
         </div>
         <div class="pane" id="pane-preview">
-          <iframe id="preview-frame" title="Preview del prototipo generado" sandbox="allow-scripts allow-same-origin"></iframe>
+          <div class="viewport-bar" id="viewport-bar" role="group" aria-label="Ancho de la preview" hidden>
+            <button class="vp-btn active" data-w="full" aria-pressed="true">🖥 Escritorio</button>
+            <button class="vp-btn" data-w="768" aria-pressed="false">▭ Tablet</button>
+            <button class="vp-btn" data-w="375" aria-pressed="false">▯ Móvil</button>
+          </div>
+          <div class="preview-stage" id="preview-stage">
+            <iframe id="preview-frame" title="Preview del prototipo generado" sandbox="allow-scripts allow-same-origin"></iframe>
+          </div>
           <div class="preview-empty" id="preview-empty"><p>La preview aparecerá cuando la generación termine.</p></div>
           <div class="edit-hint" id="edit-hint" hidden>Pasa el mouse sobre la preview y haz <strong>click</strong> en el elemento que quieras cambiar.</div>
           <div class="edit-bar" id="edit-bar" hidden>

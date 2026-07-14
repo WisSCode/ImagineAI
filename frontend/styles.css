@@ -210,12 +210,34 @@ textarea:focus, select:focus { outline: 2px solid var(--brand); outline-offset: 
 }
 .statusline.error { color: var(--danger); }
 
+/* ── Preview + toggle de viewport ───────────── */
+.viewport-bar { display: flex; justify-content: center; gap: 4px; padding-bottom: 10px; flex-shrink: 0; }
+.vp-btn {
+  background: var(--bg-inset); border: 1px solid var(--line); color: var(--ink-dim);
+  font-family: var(--sans); font-size: 12px; font-weight: 600;
+  padding: 5px 12px; border-radius: 999px; cursor: pointer;
+  transition: color .12s ease, border-color .12s ease, background .12s ease;
+}
+.vp-btn:hover { color: var(--ink); border-color: var(--brand); }
+.vp-btn.active { background: var(--brand); color: var(--brand-ink); border-color: transparent; }
+
+.preview-stage {
+  flex: 1; min-height: 0; overflow: auto;
+  display: flex; justify-content: center; /* centra el iframe cuando es más estrecho que el panel */
+}
 #preview-frame {
-  flex: 1; width: 100%; border: 1px solid var(--line); border-radius: 10px;
-  background: #fff; display: none;
+  display: none;
+  height: 100%; max-width: 100%;
+  flex: 0 0 auto; /* respeta el ancho del preset; no se estira ni encoge */
+  border: 1px solid var(--line); border-radius: 10px;
+  background: #fff;
+  transition: width .25s ease;
 }
 #preview-frame.visible { display: block; }
-#preview-frame.visible + .preview-empty { display: none; }
+/* El iframe está envuelto en .preview-stage, así que el placeholder ya no es su
+   hermano adyacente: lo superponemos y lo ocultamos cuando hay preview cargada. */
+#pane-preview .preview-empty { position: absolute; inset: 0; margin: 0; max-width: none; display: flex; align-items: center; justify-content: center; padding: 0 20px; }
+#pane-preview:has(#preview-frame.visible) .preview-empty { display: none; }
 
 /* ── Autenticación ──────────────────────────── */
 .topbar-right { display: flex; align-items: center; gap: 10px; }
