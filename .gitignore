@@ -1,4 +1,6 @@
 .claude/
 .pytest_cache/
 generated/
-data/
+data
+venv/
+tests/__pycache__/

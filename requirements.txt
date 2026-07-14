@@ -1,4 +1,4 @@
 fastapi>=0.115
 uvicorn[standard]>=0.32
-httpx>=0.27
+httpx2>=0.27
 pytest>=8.0  # tests (py -3.13 -m pytest tests)
