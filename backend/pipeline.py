@@ -336,6 +336,27 @@ def _write_project(job: Job, files: dict[str, str], brief: str) -> Path:
     return project_dir
 
 
+def read_manifesto(job_id: str) -> str:
+    """Recupera el manifiesto de diseño desde el README.md del proyecto ya escrito.
+
+    Permite volver a mostrar el manifiesto al reabrir un trabajo terminado (la
+    generación en vivo lo transmite por streaming, pero al reabrir desde el
+    historial ese contexto se había perdido). Los README de ediciones heredan el
+    manifiesto del padre y anexan secciones "## Edición"; esas se recortan."""
+    readme_path = config.GENERATED_DIR / job_id / "README.md"
+    if not readme_path.is_file():
+        return ""
+    marker = "## Manifiesto de diseño"
+    text = readme_path.read_text(encoding="utf-8")
+    idx = text.find(marker)
+    if idx == -1:
+        return ""
+    body = text[idx + len(marker):].split("\n## Edición ", 1)[0].strip()
+    if body.endswith("---"):  # separador que precede a las ediciones anexadas
+        body = body[:-3].strip()
+    return body
+
+
 def make_zip(job_id: str) -> Path:
     """Empaqueta el proyecto generado en un .zip (idempotente)."""
     project_dir = config.GENERATED_DIR / job_id

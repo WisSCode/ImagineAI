@@ -202,6 +202,19 @@ async def job_detail(job_id: str, request: Request):
     return _row_summary(row)
 
 
+@app.get("/api/jobs/{job_id}/brief")
+async def job_brief(job_id: str, request: Request):
+    """Manifiesto de diseño del trabajo (extraído del README.md del proyecto), para
+    recuperar ese contexto al reabrir un trabajo terminado desde el historial."""
+    user = auth.require_user(request)
+    if not SAFE_ID_RE.match(job_id):
+        raise HTTPException(404, "Identificador de trabajo inválido")
+    row = db.get_job(job_id)
+    if not row or row["user_id"] != user["id"]:
+        raise HTTPException(404, "Trabajo no encontrado")
+    return {"brief": pipeline.read_manifesto(job_id)}
+
+
 @app.get("/api/jobs/{job_id}/events")
 async def job_events(job_id: str, request: Request):
     """SSE: replay del historial + eventos en vivo hasta que el trabajo termine."""
