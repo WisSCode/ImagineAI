@@ -35,6 +35,12 @@ class GenerateRequest(BaseModel):
     stack: str | None = None
     device: str | None = None
 
+    def __init__(self, **data):
+        super().__init__(**data)
+        # Validar que el prompt no sea solo espacios en blanco
+        if not self.prompt.strip():
+            raise ValueError("El prompt no puede contener solo espacios en blanco")
+
 
 class EditRequest(BaseModel):
     instruction: str = Field(min_length=3, max_length=2000)
